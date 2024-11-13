@@ -43,3 +43,6 @@ class UserManager:
         file_path = os.path.join(self.user_dir, filename)
         print(f"Getting file content from '{file_path}'...")
         return self.file_manager.read_file(file_path)
+    def create(self,password):
+        return self.access_manager.create_access(password)
+        

@@ -37,7 +37,7 @@ class LoginWindow(QWidget):
         
 
     def createAccount(self):
-        if not self.access_manager.create_access(self.input_password.text()):
+        if not self.user_manager.create(self.input_password.text()):
             error_dialog = QMessageBox()
             error_dialog.setIcon(QMessageBox.Critical)
             error_dialog.setText("Le mots de passe existe déjà")
