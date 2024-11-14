@@ -33,20 +33,18 @@ class Mainwindow(QWidget):
     def go_to_widget(self,widget):
         self.stack.setCurrentWidget(widget)
         self.stack.currentWidget().build_layout()
-
-
         print(f"switched to {widget}")
+
     def go_to_login(self):
         self.go_to_widget(self.loggin_window)
+
     def go_to_menu(self):
         self.go_to_widget(self.menu_window)
+
     def go_to_file(self):
         self.go_to_widget(self.file_window)
-    def go_to_new_file(self):
-        self.file_window.set_file("")
-        print(self.file_window.filename)
-        self.go_to_widget(self.file_window)
-    def go_to_open_file(self,filename):
+
+    def go_to_open_file(self,filename = ""):
         self.file_window.set_file(filename)
         self.go_to_widget(self.file_window)
 
