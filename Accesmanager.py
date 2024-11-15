@@ -24,6 +24,7 @@ class AccessManager:
         return True
     
     def connect(self, Password):
+
         if Password == "":
             return False
         if self.accessAlreadyExists(Password):

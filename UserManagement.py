@@ -1,7 +1,4 @@
-import os 
-
-from Accesmanager import AccessManager
-from filemanager import FileManager
+from ServerManager import ServerManager
 
 class UserManager:
     _instance = None
@@ -11,38 +8,30 @@ class UserManager:
             self._instance = super(UserManager, self).__new__(self, *args, **kwargs)
         return self._instance
     def __init__(self):
-        self.access_manager = AccessManager()
-        self.file_manager = FileManager()
-        self.user_dir = ""
+        self.serverManager = ServerManager()
         self.connected = False
 
     def connect(self,password):
-        print(password)
-        self.connected = self.access_manager.connect(password)
-        if self.connected:
-            self.user_dir = password
-            print(f"Connected to user '{self.user_dir}'.")
-        
+
+        self.connected = self.serverManager.connect_user(password)
         return self.connected
         
     def save_file(self, filename, content):
-        print(f"{self.user_dir} , {filename}")
-        file_path = os.path.join(self.user_dir, filename)
-        print(f"Saving file '{file_path}'...")
-        self.file_manager.save_file(file_path,content)
+        self.serverManager.save_file(filename, content)
 
     def get_files(self):
-        if not self.connected:
-            return []
-        print(f"gettin files in {self.user_dir}")
-        return self.file_manager.list_files_in_folder(self.user_dir)
+        #il faudra décrypter les noms du fichier avec Cobra et la clé de sessiosn
+        return self.serverManager.list_files_in_folder()
     
     def get_file_content(self, filename):
-        if not self.connected:
-            return ""
-        file_path = os.path.join(self.user_dir, filename)
-        print(f"Getting file content from '{file_path}'...")
-        return self.file_manager.read_file(file_path)
+        return self.serverManager.get_file_content(filename)
+        # décriptage du fichier du cryptage avec Cobra et la clé de session
     def create(self,password):
-        return self.access_manager.create_access(password)
-        
+        return self.serverManager.create_access(password)
+    
+    def connect_to_serveur(self):
+        # Demande de certificat 
+
+        # Réception de la clé de session
+
+        return
