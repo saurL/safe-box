@@ -36,7 +36,7 @@ class MenuWindow(QWidget):
         
         # Un bouton qui permet d'accéder à la page pour créer un fichier
         createFileButton = QPushButton('Create File')
-        createFileButton.clicked.connect(self.main_window.go_to_new_file)
+        createFileButton.clicked.connect(self.main_window.go_to_open_file)
         self.layout.addWidget(createFileButton)
 
         self.setLayout(self.layout)
