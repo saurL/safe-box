@@ -2,7 +2,7 @@ import os
 
 from Accesmanager import AccessManager
 from filemanager import FileManager
-
+from EncryptionManager import EncryptionManager
 class ServerManager:
 
     _instance = None
@@ -15,8 +15,10 @@ class ServerManager:
     def __init__(self) -> None:
         self.access_manager = AccessManager()
         self.file_manager = FileManager()
+        self.encryption_manager = EncryptionManager()
         self.connected = False
         self.user_dir = ""
+        self.user_private_key = None
 
     def connect_user(self, password):
         self.décrypt_communication()
@@ -27,6 +29,8 @@ class ServerManager:
         if self.connected:
             self.user_dir = password
             print(f"Connected to user '{self.user_dir}'.")
+            self.user_private_key = self.encryption_manager.key_derivation(password)
+            print(f"User private key : {self.user_private_key.hex()}")
         return self.connected
     
     def connect_app(self):

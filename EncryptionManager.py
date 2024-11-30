@@ -1,28 +1,23 @@
-import hashlib
+from Sponge import Sponge
+
+
 
 class EncryptionManager:
 
     def __init__(self) -> None:
+        self.sponge = Sponge(1152, 448, 24)
         pass 
 
     def key_derivation(self, password: str) -> bytes:
 
-        key_length = 32
-        iterations  = 100000
-        salt = b''
+        iterations = 200
 
-        #si l'on souhaite ajouter du sel aléatoire plus tard
-        #if salt is None: # Générer un sel aléatoire 
-        #    salt = os.urandom(16)
-
-        key = hashlib.pbkdf2_hmac(
-            'sha256',                    # Algorithme de hachage
-            password.encode('utf-8'),    # Mot de passe en bytes
-            salt,                         # Pas de sel (string vide)
-            iterations,                  # Nombre d'itérations
-            dklen=key_length             # Longueur de la clé souhaitée
-        )
-
+        key = password
+        
+        for _ in range(iterations):
+            self.sponge.absorb(key)
+            key = self.sponge.squeeze(2048)
+        print(f"Hashage du mot de passe {password} en la clef: {key}")
         return key                          
 
 if __name__ == "__main__":
