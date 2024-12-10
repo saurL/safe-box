@@ -18,19 +18,23 @@ class ServerManager:
         self.encryption_manager = EncryptionManager()
         self.connected = False
         self.user_dir = ""
+        self.user_public_key = None
         self.user_private_key = None
 
-    def connect_user(self, password):
+    def connect_user(self, loggin,password):
         self.décrypt_communication()
         # dérivation du mot de passe pour avoir la clé privé et on la stocke
 
         # A partir de la clé privé on obtient la clé publique et on vérifie qu'elle existe dans nos dossier
-        self.connected = self.access_manager.connect(password)
+        public_key = self.encryption_manager.key_derivation(password).hex()
+        self.connected = self.access_manager.connect(loggin,public_key)
         if self.connected:
+            self.user_public_key = public_key
+            print("User public key : ", public_key)
+            self.user_private_key = self.encryption_manager.key_derivation(self.user_public_key).hex()
+            print("User private key : ", self.user_private_key)
             self.user_dir = password
             print(f"Connected to user '{self.user_dir}'.")
-            self.user_private_key = self.encryption_manager.key_derivation(password)
-            print(f"User private key : {self.user_private_key.hex()}")
         return self.connected
     
     def connect_app(self):
@@ -73,8 +77,11 @@ class ServerManager:
 
         return self.file_manager.read_file(file_path)
     
-    def create_access(self, password):
-        return self.access_manager.create_access(password)
+    def create_access(self,loggin, password):
+        print("key derivation with password",password)
+        public_key = self.encryption_manager.key_derivation(password)
+        print(f"Creating access for user {password} with public key :'{public_key.hex()}'...")
+        return self.access_manager.create_access(loggin,public_key)
     # dérivation du mot de passe pour avoir la clé privé  et publique
 
     def décrypt_communication(self):

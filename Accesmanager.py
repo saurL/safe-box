@@ -17,16 +17,26 @@ class AccessManager:
     def accessAlreadyExists(self,Password):
         return self.file_manager.folder_exists(Password) 
 
-    def create_access(self, Password):
-        if self.accessAlreadyExists(Password):
+    def create_access(self, loggin,public_key):
+        if self.accessAlreadyExists(loggin):
             return False
-        self.file_manager.create_folder(Password)
+        self.file_manager.create_folder(loggin)
+        self.create_key(loggin,public_key)
         return True
-    
-    def connect(self, Password):
-
-        if Password == "":
+    def create_key(self, loggin,key):
+        print("creating key")
+        if not self.accessAlreadyExists(loggin):
             return False
-        if self.accessAlreadyExists(Password):
-            return True
-        return False
+        self.file_manager.create_key(loggin,key)
+    
+    def get_key(self, loggin):
+        if not self.accessAlreadyExists(loggin):
+            return False
+        return self.file_manager.get_key(loggin)
+    
+    def connect(self, loggin,public_key):
+        if public_key == "" or loggin == "":
+            return False
+        if not self.accessAlreadyExists(loggin):
+            return False
+        return self.get_key(loggin) == public_key

@@ -7,10 +7,8 @@ class Sponge:
         self.capacity_bytes = capacity//8
         self.rounds = rounds
         self.reset()
-        self.sha = SHA256()
     def reset(self):
         self.state = bytearray(self.bytesrate + self.capacity_bytes)  
-        self.sha.reset()
 
 
     def absorb(self, input_data):
@@ -34,21 +32,21 @@ class Sponge:
         output_length=output_length//8
         output = bytearray()
         while len(output) < output_length:
-
             output.extend(self.state[:self.bytesrate])
             self._permutation()
         return bytes(output[:output_length])
 
     def _permutation(self):
-        for i in range(0, len(self.state), 32):
-            block = self.state[i:i+32]
-            digest = bytearray.fromhex(self.sha.digest(block))
-            self.state[i:i+32] = digest
-            temp_state = self.state[:]
-            for index in range(len(self.state)-4):
-                combined = int.from_bytes(temp_state[index:index+4], 'big')
-                rotated = self._right_rotate(combined,(index+1)%32, size=32)
+        temp_state = self.state[:]
+        for r in range(self.rounds):
+            for i in range(len(self.state)-4):
+                if temp_state[i:i+4]==b'\x00\x00\x00\x00':
+                    continue
+                combined = int.from_bytes(temp_state[i:i+4], 'big')
+                rotated = self._right_rotate(combined,(i+1)%32, size=32)
                 self.state[i:i+4] = rotated.to_bytes(4, 'big')
+
+        
 
     
     def _right_rotate(self ,value, shift, size=8):

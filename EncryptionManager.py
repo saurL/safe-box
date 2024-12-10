@@ -9,15 +9,14 @@ class EncryptionManager:
         pass 
 
     def key_derivation(self, password: str) -> bytes:
-
-        iterations = 200
+        self.sponge.reset()
+        iterations = 100
 
         key = password
         
         for _ in range(iterations):
             self.sponge.absorb(key)
             key = self.sponge.squeeze(2048)
-        print(f"Hashage du mot de passe {password} en la clef: {key}")
         return key                          
 
 if __name__ == "__main__":

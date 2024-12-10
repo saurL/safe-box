@@ -11,9 +11,9 @@ class UserManager:
         self.serverManager = ServerManager()
         self.connected = False
 
-    def connect(self,password):
+    def connect(self,loggin , password):
 
-        self.connected = self.serverManager.connect_user(password)
+        self.connected = self.serverManager.connect_user(loggin, password)
         return self.connected
         
     def save_file(self, filename, content):
@@ -26,8 +26,10 @@ class UserManager:
     def get_file_content(self, filename):
         return self.serverManager.get_file_content(filename)
         # décriptage du fichier du cryptage avec Cobra et la clé de session
-    def create(self,password):
-        return self.serverManager.create_access(password)
+    def create(self, loggin, password):
+        if not loggin or not password:
+            return
+        return self.serverManager.create_access(loggin,password)
     
     def connect_to_serveur(self):
         # Demande de certificat 

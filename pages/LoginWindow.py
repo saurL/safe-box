@@ -15,6 +15,11 @@ class LoginWindow(QWidget):
         self.setWindowTitle("Login")
         self.setGeometry(600, 600, 600, 150)
         layout = QVBoxLayout()
+        self.label_login = QLabel("Login:")
+        layout.addWidget(self.label_login)
+        self.label_login.setAlignment(Qt.AlignCenter)
+        self.input_login = QLineEdit()
+        layout.addWidget(self.input_login)
 
         self.label_password = QLabel("Password:")
         layout.addWidget(self.label_password)
@@ -37,15 +42,16 @@ class LoginWindow(QWidget):
         
 
     def createAccount(self):
-        if not self.user_manager.create(self.input_password.text()):
+        if not self.user_manager.create(self.input_login.text(),self.input_password.text()):
             error_dialog = QMessageBox()
             error_dialog.setIcon(QMessageBox.Critical)
-            error_dialog.setText("Le mots de passe existe déjà")
+            error_dialog.setText("Nom d'utilisateur déjà utilisé")
             error_dialog.setWindowTitle("Erreur")
             error_dialog.exec_()
+            
     def connectAccount(self):
         print(self.input_password.text())
-        if not self.user_manager.connect(self.input_password.text()):
+        if not self.user_manager.connect(self.input_login.text(),self.input_password.text()):
             return
         print("connection réusse")
         self.main_window.go_to_menu()
