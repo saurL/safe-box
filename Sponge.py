@@ -6,8 +6,10 @@ class Sponge:
         self.bytesrate = bitrate//8
         self.capacity_bytes = capacity//8
         self.rounds = rounds
-        self.reset()
         self.sha = SHA256()
+        self.reset()
+
+
     def reset(self):
         self.state = bytearray(self.bytesrate + self.capacity_bytes)  
         self.sha.reset()
@@ -34,7 +36,6 @@ class Sponge:
         output_length=output_length//8
         output = bytearray()
         while len(output) < output_length:
-
             output.extend(self.state[:self.bytesrate])
             self._permutation()
         return bytes(output[:output_length])

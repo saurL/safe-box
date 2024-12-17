@@ -20,6 +20,9 @@ class ServerManager:
         self.user_dir = ""
         self.user_public_key = None
         self.user_private_key = None
+        self.prime_number_one = 2**127 - 1
+        self.prime_number_two = 2**521 - 1
+        self.mod = self.prime_number_one*self.prime_number_two
 
     def connect_user(self, loggin,password):
         self.décrypt_communication()
@@ -29,9 +32,10 @@ class ServerManager:
         public_key = self.encryption_manager.key_derivation(password).hex()
         self.connected = self.access_manager.connect(loggin,public_key)
         if self.connected:
-            self.user_public_key = public_key
+            self.user_public_key = [public_key,self.mod]
             print("User public key : ", public_key)
-            self.user_private_key = self.encryption_manager.key_derivation(self.user_public_key).hex()
+
+            self.user_private_key = [hex( self.encryption_manager.mod_inverse(self.user_public_key[0],self.mod))[2:],self.mod]
             print("User private key : ", self.user_private_key)
             self.user_dir = password
             print(f"Connected to user '{self.user_dir}'.")
@@ -53,7 +57,7 @@ class ServerManager:
         file_path = os.path.join(self.user_dir, filename)
         print(f"Saving file '{file_path}'...")
 
-        self.file_manager.save_file(file_path,content)
+        self.file_manager.save_file(file_path,content,self.user_public_key)
 
     def list_files_in_folder(self):
         if not self.connected:
@@ -75,7 +79,7 @@ class ServerManager:
 
         self.encrypt_communication()
 
-        return self.file_manager.read_file(file_path)
+        return self.file_manager.read_file(file_path,self.user_private_key)
     
     def create_access(self,loggin, password):
         print("key derivation with password",password)
