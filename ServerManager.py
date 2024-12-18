@@ -35,7 +35,7 @@ class ServerManager:
             self.user_public_key = [public_key,self.mod]
             print("User public key : ", public_key)
 
-            self.user_private_key = [hex( self.encryption_manager.mod_inverse(self.user_public_key[0],self.mod))[2:],self.mod]
+            self.user_private_key = [hex( self.encryption_manager.mod_inverse_key(self.user_public_key[0],self.mod))[2:],self.mod]
             print("User private key : ", self.user_private_key)
             self.user_dir = password
             print(f"Connected to user '{self.user_dir}'.")
