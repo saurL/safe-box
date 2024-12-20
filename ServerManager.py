@@ -28,8 +28,12 @@ class ServerManager:
         self.décrypt_communication()
         # dérivation du mot de passe pour avoir la clé privé et on la stocke
 
+        # vérification de certificat 
+        
         # A partir de la clé privé on obtient la clé publique et on vérifie qu'elle existe dans nos dossier
         public_key = self.encryption_manager.key_derivation(password).hex()
+        # pulbic_key = password_hash
+
         self.connected = self.access_manager.connect(loggin,public_key)
         if self.connected:
             self.user_public_key = [public_key,self.mod]

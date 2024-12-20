@@ -144,9 +144,8 @@ class EncryptionManager:
         """Reverse the bits of an 8-bit byte."""
         return int('{:08b}'.format(byte)[::-1], 2)
 
-    def feistel_step(self,block, round_key):
+    def feistel_step(self,L, R):
         """Implémente une étape simplifiée de Feistel"""
-        L, R = block[:64], block[64:]  # Division en deux moitiés
         print("block",block)
         # Étape 1 : Inversion des bits
         R_parts = [(int(R) >> (8 * i)) & 0xFF for i in range(len(R) // 8)]
@@ -157,15 +156,11 @@ class EncryptionManager:
 
         # Étape 1.5 : Application de la fonction f
     
-        print("Z",Z)
-        print("len Z",len(Z))
         # Étape 2 : Permutation des bits
         p = [45, 21, 20, 19, 32, 27, 38, 55, 14, 18, 59, 63, 1, 25, 13, 62, 33, 7, 50, 24, 56, 28, 26, 11, 53, 3, 22, 51, 9, 5, 58, 41, 29, 49, 23, 46, 17, 4, 44, 6, 16, 15, 36, 37, 34, 12, 60, 61, 8, 42, 54, 2, 43, 0, 52, 39, 31, 57, 35, 10, 40, 47, 48, 30]
-        print("Z",Z)
         Y = ''.join(Z[p[i]] for i in range(len(Z)))
-        print("Y",Y)
         # Étape 3 : Génération pseudo-aléatoire
-        random.seed(int(round_key, 2))  # Graine à partir de la clé d'itération
+        
         prng_values = [format(random.randint(0, 255), '08b') for _ in range(len(Y) // 8)]
         prng_result = ''.join(prng_values)
         # XOR avec la clé dérivée
@@ -175,10 +170,7 @@ class EncryptionManager:
 
     def serpent_iteration(self,block, round_key):
         """Une itération de l'algorithme Serpent"""
-        print("itération")
-        """print("block",block)
-        block = bitstring(int(block, 2), 128)
-        print("block after bitstring",block)"""
+
         # Étape 1 : Add Round Key
         block = self.add_round_key(block, round_key)
 
@@ -186,7 +178,9 @@ class EncryptionManager:
         block = self.apply_sbox(block)
 
         # Étape 3 : Feistel
-        block = self.feistel_step(block, round_key)
+        L, R = block[:64], block[64:]  # Division en deux moitiés
+
+        new_L , new_R = self.feistel_step(L, R)
 
         return block
     def cobra(self,input,key):
