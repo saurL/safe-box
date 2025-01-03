@@ -1,5 +1,8 @@
 from ServerManager import ServerManager
 
+
+
+
 class UserManager:
     _instance = None
 
@@ -34,6 +37,7 @@ class UserManager:
     def connect_to_serveur(self):
         # Demande de certificat 
 
+        
         # Réception de la clé de session
 
         return

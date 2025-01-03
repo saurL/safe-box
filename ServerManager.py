@@ -1,8 +1,11 @@
 import os
+import random
 
 from Accesmanager import AccessManager
 from filemanager import FileManager
 from EncryptionManager import EncryptionManager
+from certificat import certificat
+
 class ServerManager:
 
     _instance = None
@@ -16,6 +19,7 @@ class ServerManager:
         self.access_manager = AccessManager()
         self.file_manager = FileManager()
         self.encryption_manager = EncryptionManager()
+        self.certificat = certificat()
         self.connected = False
         self.user_dir = ""
         self.user_public_key = None
@@ -27,9 +31,22 @@ class ServerManager:
     def connect_user(self, loggin,password):
         self.décrypt_communication()
         # dérivation du mot de passe pour avoir la clé privé et on la stocke
-
-        # vérification de certificat 
         
+        print("Vérification des certificats : ")
+
+        # Authentification de l'utilisateur par le coffre
+        if not self.certificat.authenticate_user():
+            print("Authentification de l'utilisateur échouée")
+            return False
+        
+        # Authentification du coffre par l'utilisateur
+        if not self.certificat.authenticate_safebox():
+            print("Authentification du coffre échouée.")
+            return False
+        
+        print("Fin vérification des certificats \n")
+
+    
         # A partir de la clé privé on obtient la clé publique et on vérifie qu'elle existe dans nos dossier
         public_key = self.encryption_manager.key_derivation(password).hex()
         # pulbic_key = password_hash
@@ -46,8 +63,8 @@ class ServerManager:
         return self.connected
     
     def connect_app(self):
-        # veérification des certificats 
-
+        # vérification des certificats (A VOIR : pourquoi là ??)
+        
         #envoit de la clef de session envoyé au client
 
 
