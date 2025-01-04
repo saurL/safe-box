@@ -1,5 +1,153 @@
 from Sponge import Sponge
 import random
+# Constants
+phi = 0x9e3779b9
+r = 32
+
+IPTable = [
+    0, 32, 64, 96, 1, 33, 65, 97, 2, 34, 66, 98, 3, 35, 67, 99,
+    4, 36, 68, 100, 5, 37, 69, 101, 6, 38, 70, 102, 7, 39, 71, 103,
+    8, 40, 72, 104, 9, 41, 73, 105, 10, 42, 74, 106, 11, 43, 75, 107,
+    12, 44, 76, 108, 13, 45, 77, 109, 14, 46, 78, 110, 15, 47, 79, 111,
+    16, 48, 80, 112, 17, 49, 81, 113, 18, 50, 82, 114, 19, 51, 83, 115,
+    20, 52, 84, 116, 21, 53, 85, 117, 22, 54, 86, 118, 23, 55, 87, 119,
+    24, 56, 88, 120, 25, 57, 89, 121, 26, 58, 90, 122, 27, 59, 91, 123,
+    28, 60, 92, 124, 29, 61, 93, 125, 30, 62, 94, 126, 31, 63, 95, 127,
+    ]
+
+def S(box, input):
+    """Apply S-box number 'box' to 4-bit bitstring 'input' and return a
+    4-bit bitstring as the result."""
+
+    return SBoxBitstring[box%8][input]
+    # There used to be 32 different S-boxes in serpent-0. Now there are
+    # only 8, each of which is used 4 times (Sboxes 8, 16, 24 are all
+    # identical to Sbox 0, etc). Hence the %8.
+
+
+def IP(input):
+    """Apply the Initial Permutation to the 128-bit bitstring 'input'
+    and return a 128-bit bitstring as the result."""
+
+    return applyPermutation(IPTable, input)
+
+def applyPermutation(permutationTable, input):
+    """Apply the permutation specified by the 128-element list
+    'permutationTable' to the 128-bit bitstring 'input' and return a
+    128-bit bitstring as the result."""
+
+    if len(input) != len(permutationTable):
+        raise ValueError (f"input size {len(input)} doesn't match perm table size {len(permutationTable)}")
+
+    result = ""
+    for i in range(len(permutationTable)):
+        result = result + input[permutationTable[i]]
+    return result
+
+
+def binaryXor(n1, n2):
+    """Return the xor of two bitstrings of equal length as another
+    bitstring of the same length.
+
+    EXAMPLE: binaryXor("10010", "00011") -> "10001"
+    """
+
+    if len(n1) != len(n2):
+        raise ValueError("can't xor bitstrings of different " + \
+              "lengths (%d and %d)" % (len(n1), len(n2)))
+    # We assume that they are genuine bitstrings instead of just random
+    # character strings.
+
+    result = ""
+    for i in range(len(n1)):
+        if n1[i] == n2[i]:
+            result = result + "0"
+        else:
+            result = result + "1"
+    return result
+
+def xor(*args):
+    """Return the xor of an arbitrary number of bitstrings of the same
+    length as another bitstring of the same length.
+
+    EXAMPLE: xor("01", "11", "10") -> "00"
+    """
+
+    if args == []:
+        raise ValueError("at least one argument needed")
+
+    result = args[0]
+    for arg in args[1:]:
+        result = binaryXor(result, arg)
+    return result
+
+def rotateLeft(input, places):
+    """Take a bitstring 'input' of arbitrary length. Rotate it left by
+    'places' places. Left means that the 'places' most significant bits are
+    taken out and reinserted as the least significant bits. Note that,
+    because the bitstring representation is little-endian, the visual
+    effect is actually that of rotating the string to the right.
+
+    EXAMPLE: rotateLeft("000111", 2) -> "110001"
+    """
+
+    p = places % len(input)
+    return input[-p:] + input[:-p]
+
+
+def makeSubkeys(userKey):
+    """Given the 256-bit bitstring 'userKey' (shown as K in the paper, but
+    we can't use that name because of a collision with K[i] used later for
+    something else), return two lists (conceptually K and KHat) of 33
+    128-bit bitstrings each."""
+
+    # Because in Python I can't index a list from anything other than 0,
+    # I use a dictionary instead to legibly represent the w_i that are
+    # indexed from -8.
+
+    # We write the key as 8 32-bit words w-8 ... w-1
+    # ENOTE: w-8 is the least significant word
+
+    w = {}
+    for i in range(-8, 0):
+        w[i] = userKey[(i+8)*32:(i+9)*32]
+    # We expand these to a prekey w0 ... w131 with the affine recurrence
+    for i in range(132):
+        w[i] = rotateLeft(
+            xor(w[i-8], w[i-5], w[i-3], w[i-1],
+                bitstring(phi, 32), bitstring(i,32)),
+            11)
+
+    # The round keys are now calculated from the prekeys using the S-boxes
+    # in bitslice mode. Each k[i] is a 32-bit bitstring.
+    k = {}
+    for i in range(r+1):
+        whichS = (r + 3 - i) % r
+        k[0+4*i] = ""
+        k[1+4*i] = ""
+        k[2+4*i] = ""
+        k[3+4*i] = ""
+        for j in range(32): # for every bit in the k and w words
+            # ENOTE: w0 and k0 are the least significant words, w99 and k99
+            # the most.
+            input = w[0+4*i][j] + w[1+4*i][j] + w[2+4*i][j] + w[3+4*i][j]
+            output = S(whichS, input)
+            for l in range(4):
+                k[l+4*i] = k[l+4*i] + output[l]
+
+    # We then renumber the 32 bit values k_j as 128 bit subkeys K_i.
+    K = []
+    for i in range(33):
+        # ENOTE: k4i is the least significant word, k4i+3 the most.
+        K.append(k[4*i] + k[4*i+1] + k[4*i+2] + k[4*i+3])
+
+    # We now apply IP to the round key in order to place the key bits in
+    # the correct column
+    KHat = []
+    for i in range(33):
+        KHat.append(IP(K[i]))
+        
+    return K, KHat
 
 def bitstring(n, minlen=1):
     """Translate n from integer to bitstring, padding it with 0s as
@@ -71,7 +219,7 @@ class EncryptionManager:
         self.sponge = Sponge(1152, 448, 24)
         self.F={}
         for i in range(256):
-            self.F[i] = self.mod_inverse(i + 1, 257) - 1
+            self.F[bitstring(i,8)] = bitstring(self.mod_inverse(i + 1, 257) - 1,8)
          
 
     def key_derivation(self, password: str) -> bytes:
@@ -133,80 +281,254 @@ class EncryptionManager:
                 input = self.sbox(input,4)
             result += input
         return result
+    
+    def inverse_sbox(self,block):
+        result = ""
+        for i in range(0, len(block), 4):
+            input = block[i:i+4]
+            """Applique une S-Box à un bloc de 128 bits divisé en 4 bits"""
+            for _ in range(8):
+                input = self.inv_sbox(input,1)
+            for _ in range(8):
+                input = self.inv_sbox(input,2)
+            for _ in range(8):
+                input = self.inv_sbox(input,3)
+            for _ in range(8):
+                input = self.inv_sbox(input,4)
+            result += input
+        return result
 
     def sbox(self,block, sbox):
         return SBoxBitstring[sbox%4][block]
+    
+    def inv_sbox(self,block, sbox):
+        return SBoxBitstringInverse[sbox%4][block]
+    
     def add_round_key(self,block, key):
         """XOR le bloc avec la clé d'itération"""
-        return ''.join(str(int(b, 2) ^ int(k, 2) )for b, k in zip(block, key))
-
+        return self.xor(block,key)
+    
+    def xor(self,a,b):
+        return ''.join(str(int(b, 2) ^ int(k, 2) )for b, k in zip(a, b))
+    
     def reverse_bits(self,byte):
         """Reverse the bits of an 8-bit byte."""
-        return int('{:08b}'.format(byte)[::-1], 2)
-
-    def feistel_step(self,L, R):
-        """Implémente une étape simplifiée de Feistel"""
-        print("block",block)
-        # Étape 1 : Inversion des bits
-        R_parts = [(int(R) >> (8 * i)) & 0xFF for i in range(len(R) // 8)]
-       
-        Z_parts = [self.F[self.reverse_bits(part)] for part in R_parts]
-
-        Z = ''.join(bitstring(part,8)for part in Z_parts)
-
-        # Étape 1.5 : Application de la fonction f
+        return byte[::-1]
     
-        # Étape 2 : Permutation des bits
-        p = [45, 21, 20, 19, 32, 27, 38, 55, 14, 18, 59, 63, 1, 25, 13, 62, 33, 7, 50, 24, 56, 28, 26, 11, 53, 3, 22, 51, 9, 5, 58, 41, 29, 49, 23, 46, 17, 4, 44, 6, 16, 15, 36, 37, 34, 12, 60, 61, 8, 42, 54, 2, 43, 0, 52, 39, 31, 57, 35, 10, 40, 47, 48, 30]
-        Y = ''.join(Z[p[i]] for i in range(len(Z)))
-        # Étape 3 : Génération pseudo-aléatoire
+    def shift_binary_string(self,binary_string, shift):
+        """
+        Décale une chaîne binaire vers la gauche ou la droite en fonction du décalage.
         
-        prng_values = [format(random.randint(0, 255), '08b') for _ in range(len(Y) // 8)]
+        Args:
+            binary_string (str): Chaîne binaire composée uniquement de '0' et '1'.
+            shift (int): Décalage à effectuer. Si positif, décale vers la gauche.
+                        Si négatif, décale vers la droite.
+        
+        Returns:
+            str: La chaîne binaire après décalage.
+        """
+        # Vérification de l'entrée
+        if not all(c in '01' for c in binary_string):
+            raise ValueError("La chaîne doit contenir uniquement des '0' et '1'.")
+        
+        length = len(binary_string)
+        
+        # Normalisation du décalage pour éviter les dépassements
+        shift = shift % length if length > 0 else 0  # Si la longueur est 0, évite une division par 0
+
+        if shift == 0:
+            return binary_string  # Aucun décalage nécessaire
+        
+        # Décalage gauche (shift positif)
+        if shift > 0:
+            return binary_string[shift:] + binary_string[:shift]
+        
+        # Décalage droit (shift négatif)
+        else:
+            shift = abs(shift)
+            return binary_string[-shift:] + binary_string[:-shift]
+
+
+    def feistel_step(self,L, R , inv = False):
+
+        """Implémente une étape simplifiée de Feistel"""
+        # Étape 1 : Inversion des bits et application de la fonction F=(x + 1)^-1 mod257 −1
+        R_parts = [R[i:i+8] for i in range(len(R) // 8)]
+        Z_parts = [self.F[self.reverse_bits(part)] for part in R_parts]
+        Z = ''.join(Z_parts)
+        
+        # Étape 2 : Permutation des bits
+        # p = [45, 21, 20, 19, 32, 27, 38, 55, 14, 18, 59, 63, 1, 25, 13, 62, 33, 7, 50, 24, 56, 28, 26, 11, 53, 3, 22, 51, 9, 5, 58, 41, 29, 49, 23, 46, 17, 4, 44, 6, 16, 15, 36, 37, 34, 12, 60, 61, 8, 42, 54, 2, 43, 0, 52, 39, 31, 57, 35, 10, 40, 47, 48, 30] if not inv else [53, 12, 51, 25, 37, 29, 39, 17, 48, 28, 59, 23, 45, 14, 8, 41, 40, 36, 9, 3, 2, 1, 26, 34, 19, 13, 22, 5, 21, 32, 63, 56, 4, 16, 46, 58, 42, 43, 6, 55, 60, 31, 49, 52, 38, 0, 35, 61, 62, 33, 18, 27, 54, 24, 50, 7, 20, 57, 30, 10, 47, 48, 44, 11]
+        Y = Z[::-1]
+        # Étape 3 : Génération pseudo-aléatoire
+        prng_values = []
+
+        for i in range(0, len(Y), 8):
+            block = Y[i:i+8]
+            block_int = int(block, 2)
+            random.seed(block_int)
+            prng_value = format(random.randint(0, 255), '08b')
+            prng_values.append(prng_value)
+
         prng_result = ''.join(prng_values)
         # XOR avec la clé dérivée
-        new_R = ''.join(format(int(Y[i:i+8], 2) ^ int(prng_result[i:i+8], 2), '08b') for i in range(0, len(Y), 8))
+        xored = ''.join(format(int(Y[i:i+8], 2) ^ int(prng_result[i:i+8], 2), '08b') for i in range(0, len(Y), 8))
+
+        new_R = ''.join(format(int(Y[i:i+8], 2) ^ int(L[i:i+8], 2), '08b') for i in range(0, len(xored), 8))
         new_L = R
-        return new_L + new_R
 
-    def serpent_iteration(self,block, round_key):
+        return new_L , new_R
+
+    def serpent_iteration(self,block, keys):
+        while len(block)!=128:
+            block+="0"
+       
+
         """Une itération de l'algorithme Serpent"""
-
-        # Étape 1 : Add Round Key
-        block = self.add_round_key(block, round_key)
-
-        # Étape 2 : Substitution avec S-Box
-        block = self.apply_sbox(block)
-
-        # Étape 3 : Feistel
         L, R = block[:64], block[64:]  # Division en deux moitiés
+      
+        for i in range(32):
+            # Étape 1 : Add Round Key
+            block = self.add_round_key(block, keys[i])
+            # Étape 2 : Substitution avec S-Box
+            block = self.apply_sbox(block)
+            # Étape 3 : Feistel
 
-        new_L , new_R = self.feistel_step(L, R)
+            for _ in range(4): 
+                L , R = self.feistel_step(L, R)
+        
+        return f"{L}{R}"
+    
+    def serpent_iteration_inverse(self,block, keys):
+        while len(block)!=128:
+            block+="0"
+        L, R = block[:64], block[64:]  # Division en deux moitiés
+        
 
+        for i in range(31,-1,-1):
+
+            for _ in range(4): 
+                R , L = self.feistel_step(R, L)
+        
+
+            # Étape 2 : Substitution avec S-Box
+            block = self.inverse_sbox(block)
+            # Étape 1 : Add Round Key
+            block = self.add_round_key(block, keys[i])
+
+        block= f"{L}{R}"
         return block
+    
     def cobra(self,input,key):
         result = ""
         input = ''.join(format(ord(c), '08b') for c in input)
         key = ''.join(format(ord(c), '08b') for c in key)
+        _, keys = makeSubkeys(key)
 
         for i in range(0,len(input),128):
             end = min(i+128,len(input))
-            result += self.serpent_iteration(input[i:end], key)
-        return result
+            result += self.cobra_itération(input[i:end], keys)
 
-
-                             
-
-if __name__ == "__main__":
-    print("dans main")
-    password = "mon_super_mot_de_passe"
-    enc=EncryptionManager()
-    key = "1234567890ABCDEF"
-    block = enc.cobra(password,key)
-    # Diviser la chaîne binaire en groupes de 8 bits
-    byte_chunks = [block[i:i+8] for i in range(0, len(block), 8)]
-
-    # Convertir chaque groupe de 8 bits en caractère ASCII
-    text = ''.join(chr(int(byte, 2)) for byte in byte_chunks)
-
-    print(f"Texte converti : {text}")
+        byte_chunks = [result[i:i+8] for i in range(0, len(result), 8)]
+        return ''.join(chr(int(byte, 2)) for byte in byte_chunks)
     
+    def cobra_itération(self,input,keys):
+
+        serpent_result = self.serpent_iteration(input,keys)
+        
+        A = serpent_result[:32]
+        B = serpent_result[32:64]
+        C = serpent_result[64:96]
+        D = serpent_result[96:]  
+
+        A = self.shift_binary_string(A,-13)
+        C = self.shift_binary_string(C,-3)
+
+        
+        B = self.xor(B,self.xor(A,C))
+        Tmp_A = self.shift_binary_string(A,-3)
+
+        D = self.xor(D,self.xor(C,Tmp_A))
+
+        B = self.shift_binary_string(B,-1)
+        old_d=D
+        D = self.shift_binary_string(D,-7)
+
+
+
+
+        A = self.xor(A,self.xor(B,D))
+        tmp_B = self.shift_binary_string(B,-7)
+
+        C = self.xor(C,self.xor(tmp_B,D))
+
+        A = self.shift_binary_string(A, -5)
+        C = self.shift_binary_string(C , -22)
+
+        return A +B + C + D
+
+    def cobra_itération_inverse(self, input, keys ):
+        A = input[:32]
+        B = input[32:64]
+        C = input[64:96]
+        D = input[96:] 
+
+
+            # Étape 1 : Inverser les décalages finaux sur A et C
+        C = self.shift_binary_string(C, 22)
+        A = self.shift_binary_string(A, 5)
+
+        # Étape 2 : Inverser les XOR sur C
+        tmp_B = self.shift_binary_string(B,- 7)  # Défaire le décalage précédent sur B
+        C = self.xor(C, self.xor(tmp_B, D))
+        
+
+        # Étape 3 : Inverser les XOR sur A
+        A = self.xor(A, self.xor(B, D))
+
+
+        # Étape 4 : Inverser les décalages sur D et B
+        D = self.shift_binary_string(D, 7)
+        B = self.shift_binary_string(B, 1)
+
+        
+
+
+        # Étape 5 : Inverser les XOR sur D
+        Tmp_A = self.shift_binary_string(A,- 3)
+
+        D = self.xor(D, self.xor(C, Tmp_A))
+
+        # Étape 6 : Inverser les XOR sur B
+        B = self.xor(B, self.xor(A, C))
+
+        
+
+        # Étape 7 : Inverser les décalages sur C et A
+        C = self.shift_binary_string(C, 3)
+        A = self.shift_binary_string(A, 13)
+
+
+        
+        serpent_result = self.serpent_iteration_inverse(A+B+C+D, keys)
+        
+        
+
+        # Reconstruction des blocs et retour
+        return serpent_result
+        
+    def decrypt_cobra(self, input, key):
+        result = ""
+        input = ''.join(format(ord(c), '08b') for c in input)
+        key = ''.join(format(ord(c), '08b') for c in key)
+        _, keys = makeSubkeys(key)
+
+        for i in range(0,len(input),128):
+            end = min(i+128,len(input))
+            result += self.cobra_itération_inverse(input[i:end], keys)
+
+        byte_chunks = [result[i:i+8] for i in range(0, len(result), 8)]
+
+        xeit = ''.join(chr(int(byte, 2)) if set(byte) == {'0', '1'} else '' for byte in byte_chunks)
+        return  xeit
+
