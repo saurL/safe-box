@@ -7,7 +7,7 @@ class AuthentificationUser:
         self.alpha = alpha
         self.s = s
         self.pub = pow(alpha, s, p)
-
+    
     def generate_proof(self, r):
         m = random.randint(1, self.p - 1)
         M = pow(self.alpha, m, self.p)

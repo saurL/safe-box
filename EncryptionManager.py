@@ -236,11 +236,14 @@ class EncryptionManager:
         """
         Calcule l'inverse modulaire d'une clé publique en hexadécimal avec un modulo premier.
         
-        :param hex_key: Clé publique en hexadécimal (str)
+        :param hex_key: Clé publique en hexadécimal (str) ou un int 
         :param prime: Nombre premier utilisé pour le modulo (int)
         :return: Inverse modulaire (int) ou None si l'inverse n'existe pas
         """
+        
         key = int(hex_key, 16)
+
+        
         return self.mod_inverse(key, prime)
     def mod_inverse(self,input, prime):
         """
@@ -531,4 +534,24 @@ class EncryptionManager:
 
         xeit = ''.join(chr(int(byte, 2)) if set(byte) == {'0', '1'} else '' for byte in byte_chunks)
         return  xeit
+
+    def euler_totient(self,n):
+        """Calcul de φ(n)"""
+        result = n
+        p = 2
+        
+        # On parcourt tous les diviseurs premiers de n
+        while p * p <= n:
+            # Si p divise n, on met à jour n et result
+            if n % p == 0:
+                while n % p == 0:
+                    n //= p
+                result -= result // p
+            p += 1
+        
+        # Si n est un nombre premier plus grand que 1
+        if n > 1:
+            result -= result // n
+        
+        return result
 

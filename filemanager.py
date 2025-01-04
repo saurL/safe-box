@@ -12,6 +12,8 @@ class FileManager:
 
     def create_folder(self, foldername):
         folder_path = os.path.join(self.dirpath, foldername)
+        if os.path.exists(folder_path):
+            return
         os.makedirs(folder_path)
     def create_key(self, foldername,key):
         print("wrinting key")
@@ -64,18 +66,21 @@ class FileManager:
         key = int(private_key[0],16)
         print("key: " ,key)
         mod = private_key[1] 
-        block_size=(mod.bit_length() + 7) // 8   # Calculate block size based on the length of the modulus
+        block_size = (mod.bit_length()+ 7) // 8  # Calculate block size based on the length of the modulus
         print(mod,block_size,content,len(content))
         decrypted_content = bytearray()
 
         for i in range(0, len(content), block_size):
             end = min(i + block_size, len(content))
             block = content[i:end]
+            print("block ",i , " " ,block)
             block_int = int.from_bytes(block, byteorder='big')
+
             encrypted_block_int = pow(block_int, key, mod)
             encrypted_block = encrypted_block_int.to_bytes(block_size, byteorder='big')
+            print("block décrypté ",i , " " ,encrypted_block)
             decrypted_content.extend(encrypted_block)
-        print("valeur décrypté:" ,decrypted_content)
+        print("valeur chiffré:" ,decrypted_content)
         return decrypted_content.decode()
     
     def encrypt_file(self, content , public_key):
@@ -84,9 +89,10 @@ class FileManager:
         print("valeur des bytes     ",bytearray( bytes_content))
         key = int(public_key[0],16)
         mod = public_key[1] 
+        
         print("key: " ,key)
-
-        block_size=(mod.bit_length() + 7) // 8   # Calculate block size based on the length of the modulus
+        block_size = (mod.bit_length()+ 7) // 8
+        
         print(mod,block_size,content,len(bytes_content))
         encrypted_content = bytearray()
 
@@ -94,9 +100,15 @@ class FileManager:
             end = min(i + block_size, len(bytes_content))
             print("end",end , "i + block_size",i + block_size, "len(bytes_content)",len(bytes_content))
             block = bytes_content[i:end]
+            print("block ",i , " " ,block)
+
             block_int = int.from_bytes(block, byteorder='big')
             encrypted_block_int = pow(block_int, key, mod)
+
             encrypted_block = encrypted_block_int.to_bytes(block_size, byteorder='big')
+            print("block décrypté ",i , " " ,encrypted_block)
+
             encrypted_content.extend(encrypted_block)
         print("valeur encrypté:" ,encrypted_content)
         return encrypted_content
+
