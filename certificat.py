@@ -38,7 +38,6 @@ class VerificationByUser:
         if self.p_premier is None or self.q_premier is None : 
             p_premier = sympy.randprime(2**1023, 2**1024)  # Premier grand nombre premier
             q_premier = sympy.randprime(2**1023, 2**1024)  # Deuxième grand nombre premier
-        print("p :", p_premier,"q",q_premier)
         n = p_premier * q_premier  
         phi = (p_premier - 1) * (q_premier - 1)  #
         e = 65537  # Valeur de e (choisie comme étant un grand nombre premier souvent utilisé)
@@ -60,9 +59,10 @@ class VerificationByUser:
 
 class certificat:
     def __init__(self):
-        self.p = 23  
-        self.alpha = 5
-        self.s = 7
+        self.p = sympy.randprime(2**3, 2**5)  
+        self.alpha = sympy.randprime(2, self.p-1)
+        self.s = random.randint(1, self.p - 1)
+
 
 
 ##### Authentification de l'utilisateur par la safebox
@@ -76,6 +76,7 @@ class certificat:
         # Authentification de l'utilisateur
         r = verification_by_safebox.challenge()
         M, Preuve = authentification_user.generate_proof(r)
+        print("p : ", self.p, " / alpha : ", self.alpha, " / s : ",self.s)
         print(f"Message M de l'utilisateur : {M}, Preuve : {Preuve}")
 
         if verification_by_safebox.verify(M, Preuve, authentification_user.pub, r):
