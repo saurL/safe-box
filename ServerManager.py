@@ -41,8 +41,8 @@ class ServerManager:
         public_key = self.encryption_manager.key_derivation(password).hex()
 
         random.seed(public_key)
-        prime_number_one = sympy.randprime(2**20, 2**22)
-        prime_number_two = sympy.randprime(2**20, 2**22)
+        prime_number_one = sympy.randprime(2**120, 2**121)
+        prime_number_two = sympy.randprime(2**120, 2**121)
         print("p :", prime_number_one,"q",prime_number_two)
         self.mod = prime_number_one * prime_number_two
         mod = (prime_number_one-1)*(prime_number_two-1)
@@ -51,7 +51,9 @@ class ServerManager:
             self.user_public_key = [hex(self.e)[2:],self.mod]
             self.user_private_key = [hex( self.encryption_manager.mod_inverse_key(self.user_public_key[0],mod))[2:],self.mod]
             print("User public key : ", self.user_public_key)
-            test_value = 12357521765217
+            test_value = 521765217
+                          
+            print(int(self.user_private_key[0],16) ==sympy.mod_inverse(self.e,mod) )
             print(test_value)
             enc_test_value = pow(test_value,self.e,self.mod)
             print("Encrypted test value : ", enc_test_value)

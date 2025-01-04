@@ -75,9 +75,11 @@ class FileManager:
             block = content[i:end]
             print("block ",i , " " ,block)
             block_int = int.from_bytes(block, byteorder='big')
-
+           
+                
             encrypted_block_int = pow(block_int, key, mod)
-            encrypted_block = encrypted_block_int.to_bytes(block_size, byteorder='big')
+
+            encrypted_block = encrypted_block_int.to_bytes(block_size-1, byteorder='big')
             print("block décrypté ",i , " " ,encrypted_block)
             decrypted_content.extend(encrypted_block)
         print("valeur chiffré:" ,decrypted_content)
@@ -96,14 +98,17 @@ class FileManager:
         print(mod,block_size,content,len(bytes_content))
         encrypted_content = bytearray()
 
-        for i in range(0, len(bytes_content), block_size):
-            end = min(i + block_size, len(bytes_content))
+        for i in range(0, len(bytes_content), block_size-1):
+            end = min(i + block_size-1, len(bytes_content))
             print("end",end , "i + block_size",i + block_size, "len(bytes_content)",len(bytes_content))
             block = bytes_content[i:end]
             print("block ",i , " " ,block)
 
             block_int = int.from_bytes(block, byteorder='big')
+            
             encrypted_block_int = pow(block_int, key, mod)
+ 
+
 
             encrypted_block = encrypted_block_int.to_bytes(block_size, byteorder='big')
             print("block décrypté ",i , " " ,encrypted_block)
