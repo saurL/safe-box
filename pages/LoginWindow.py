@@ -11,7 +11,6 @@ class LoginWindow(QWidget):
 
 
     def initUI(self):
-        print("dans initUI de login" )
         self.setWindowTitle("Login")
         self.setGeometry(600, 600, 600, 150)
         layout = QVBoxLayout()
@@ -43,11 +42,14 @@ class LoginWindow(QWidget):
 
     def createAccount(self):
         if not self.user_manager.create(self.input_login.text(),self.input_password.text()):
+            print("Le compte n'a pas été créé car il exsite déjà")
             error_dialog = QMessageBox()
             error_dialog.setIcon(QMessageBox.Critical)
             error_dialog.setText("Nom d'utilisateur déjà utilisé")
             error_dialog.setWindowTitle("Erreur")
             error_dialog.exec_()
+        else:
+            print("Le compte a été créé avec succèes")
             
     def connectAccount(self):
         print(self.input_password.text())

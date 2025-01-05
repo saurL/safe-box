@@ -4,6 +4,7 @@ from Accesmanager import AccessManager
 from pages.LoginWindow import LoginWindow
 from pages.MenuWindow import MenuWindow
 from pages.Filewindow import FileWindow
+import sys
 
 class Mainwindow(QWidget):
     def __init__(self):
@@ -33,7 +34,6 @@ class Mainwindow(QWidget):
     def go_to_widget(self,widget):
         self.stack.setCurrentWidget(widget)
         self.stack.currentWidget().build_layout()
-        print(f"switched to {widget}")
 
     def go_to_login(self):
         self.go_to_widget(self.loggin_window)
@@ -49,6 +49,8 @@ class Mainwindow(QWidget):
         self.go_to_widget(self.file_window)
 
 if __name__ == "__main__":
+    print("Python version:", sys.version)
+
     app = QApplication([])
     window = Mainwindow()
     window.show()

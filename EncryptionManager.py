@@ -214,6 +214,8 @@ def are_coprime(a, b):
     return gcd(a, b) == 1
 
 class EncryptionManager:
+    def hmac(self,input,session_key):
+        return self.key_derivation(input+session_key)
 
     def __init__(self) -> None:
         self.sponge = Sponge(1152, 448, 24)
@@ -222,7 +224,7 @@ class EncryptionManager:
             self.F[bitstring(i,8)] = bitstring(self.mod_inverse(i + 1, 257) - 1,8)
          
 
-    def key_derivation(self, password: str) -> bytes:
+    def key_derivation(self, password: str,size=2048) -> bytes:
         self.sponge.reset()
         iterations = 100
 
@@ -230,7 +232,7 @@ class EncryptionManager:
         
         for _ in range(iterations):
             self.sponge.absorb(key)
-            key = self.sponge.squeeze(2048)
+            key = self.sponge.squeeze(size)
         return key 
     def mod_inverse_key(self,hex_key, prime):
         """
@@ -361,16 +363,22 @@ class EncryptionManager:
         Z = ''.join(Z_parts)
         
         # Étape 2 : Permutation des bits
-        # p = [45, 21, 20, 19, 32, 27, 38, 55, 14, 18, 59, 63, 1, 25, 13, 62, 33, 7, 50, 24, 56, 28, 26, 11, 53, 3, 22, 51, 9, 5, 58, 41, 29, 49, 23, 46, 17, 4, 44, 6, 16, 15, 36, 37, 34, 12, 60, 61, 8, 42, 54, 2, 43, 0, 52, 39, 31, 57, 35, 10, 40, 47, 48, 30] if not inv else [53, 12, 51, 25, 37, 29, 39, 17, 48, 28, 59, 23, 45, 14, 8, 41, 40, 36, 9, 3, 2, 1, 26, 34, 19, 13, 22, 5, 21, 32, 63, 56, 4, 16, 46, 58, 42, 43, 6, 55, 60, 31, 49, 52, 38, 0, 35, 61, 62, 33, 18, 27, 54, 24, 50, 7, 20, 57, 30, 10, 47, 48, 44, 11]
-        Y = Z[::-1]
+        p = [45, 21, 20, 19, 32, 27, 38, 55, 14, 18, 59, 63, 1, 25, 13, 62, 33, 7, 50, 24, 56, 28, 26, 11, 53, 3, 22, 51, 9, 5, 58, 41, 29, 49, 23, 46, 17, 4, 44, 6, 16, 15, 36, 37, 34, 12, 60, 61, 8, 42, 54, 2, 43, 0, 52, 39, 31, 57, 35, 10, 40, 47, 48, 30] 
+        
+        Y = ''.join(Z[p[i]] for i in range(len(p)))
         # Étape 3 : Génération pseudo-aléatoire
         prng_values = []
 
         for i in range(0, len(Y), 8):
             block = Y[i:i+8]
+            """
+            cette façon de faire est beacoup trop couteuse en resrouce
+            prng_value = self.key_derivation(block, 64)
+            prng_value = ''.join(format(byte, '08b') for byte in prng_value)"""
             block_int = int(block, 2)
             random.seed(block_int)
             prng_value = format(random.randint(0, 255), '08b')
+            prng_values.append(prng_value)
             prng_values.append(prng_value)
 
         prng_result = ''.join(prng_values)
@@ -535,23 +543,4 @@ class EncryptionManager:
         xeit = ''.join(chr(int(byte, 2)) if set(byte) == {'0', '1'} else '' for byte in byte_chunks)
         return  xeit
 
-    def euler_totient(self,n):
-        """Calcul de φ(n)"""
-        result = n
-        p = 2
-        
-        # On parcourt tous les diviseurs premiers de n
-        while p * p <= n:
-            # Si p divise n, on met à jour n et result
-            if n % p == 0:
-                while n % p == 0:
-                    n //= p
-                result -= result // p
-            p += 1
-        
-        # Si n est un nombre premier plus grand que 1
-        if n > 1:
-            result -= result // n
-        
-        return result
-
+    

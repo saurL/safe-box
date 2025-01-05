@@ -54,4 +54,4 @@ class Sponge:
     
     def _right_rotate(self ,value, shift, size=8):
        return ((value >> shift) | (value << (size - shift))& ((1 << size) - 1))
-    """ & ((1 << size) - 1)"""
+   

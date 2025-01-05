@@ -20,7 +20,6 @@ class FileWindow(QWidget):
                 widget.deleteLater()
         self.initUI()
     def initUI(self):
-        print("dans initUI de file")
         print(self.filename)
         # Set the main widget and layout
 

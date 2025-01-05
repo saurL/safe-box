@@ -24,7 +24,6 @@ class MenuWindow(QWidget):
         self.initUI()
         
     def initUI(self):
-        print("dans initUI de menu") 
 
 
 

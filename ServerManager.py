@@ -33,37 +33,33 @@ class ServerManager:
         self.g = 5
         self.p = 2**127 - 1
 
-    def connect_user(self, loggin,password):
-        loggin = self.décrypt_communication(loggin)
-        password = self.décrypt_communication(password)
-        # dérivation du mot de passe pour avoir la clé privé et on la stocke
-        
-        public_key = self.encryption_manager.key_derivation(password).hex()
 
-        random.seed(public_key)
-        prime_number_one = sympy.randprime(2**120, 2**121)
-        prime_number_two = sympy.randprime(2**120, 2**121)
-        print("p :", prime_number_one,"q",prime_number_two)
-        self.mod = prime_number_one * prime_number_two
-        mod = (prime_number_one-1)*(prime_number_two-1)
+    def connect_user(self, loggin,password, hasmac_loggin, hasmac_password):
+        loggin , hasmac_loggin_ok = self.décrypt_communication(loggin,hasmac_loggin)
+        password , hasmac_password_ok= self.décrypt_communication(password,hasmac_password)
+        if not hasmac_loggin_ok or not hasmac_password_ok:
+            return False
+        # dérivation du mot de passe pour avoir la clé privé et on la stocke
+        print("Connexion de l'utilisateur : ",loggin, "avec le mot de passe : ",password)
+        print("Dérivation de la clé publique a partir du mot de passe ...")
+        public_key = self.encryption_manager.key_derivation(password).hex()
+        print(f"clé publique :'{public_key}'")
+        print("Connexion de l'utilisateur avec la clé publique ...")
         self.connected = self.access_manager.connect(loggin,public_key)
         if self.connected:
+            print("Calcul des nombre premier pour RSA a partir de la clé publique  ...")
+            random.seed(public_key)
+            prime_number_one = sympy.randprime(2**120, 2**121)
+            prime_number_two = sympy.randprime(2**120, 2**121)
+            self.mod = prime_number_one * prime_number_two
+            mod = (prime_number_one-1)*(prime_number_two-1)
+            print("Calcul de la clé privé RSA ...")
             self.user_public_key = [hex(self.e)[2:],self.mod]
             self.user_private_key = [hex( self.encryption_manager.mod_inverse_key(self.user_public_key[0],mod))[2:],self.mod]
-            print("User public key : ", self.user_public_key)
-            test_value = 521765217
-                          
-            print(int(self.user_private_key[0],16) ==sympy.mod_inverse(self.e,mod) )
-            print(test_value)
-            enc_test_value = pow(test_value,self.e,self.mod)
-            print("Encrypted test value : ", enc_test_value)
-            dec_test_value = pow(enc_test_value,int(self.user_private_key[0],16),self.mod)
-            print ("Decrypted test value : ", dec_test_value)
-            
-            print(int(self.user_private_key[0],16))
-            print("User private key : ", self.user_private_key)
             self.user_dir = loggin
             print(f"Connected to user '{self.user_dir}'.")
+        else:
+            print("Connexion échouée")
         return self.connected
     
     def verify_certificat(self):
@@ -80,6 +76,7 @@ class ServerManager:
             return False
         
         print("Fin vérification des certificats \n")
+        return True
 
     
     def diffle_hellman(self,user_half):
@@ -100,11 +97,13 @@ class ServerManager:
     
 
 
-    def save_file(self, filename, content):
+    def save_file(self, filename, content,hasmac_filename, hasmac_content):
 
-        filename = self.décrypt_communication(filename)
-        content = self.décrypt_communication(content)
+        filename , hasmac_filename_ok = self.décrypt_communication(filename,hasmac_filename)
+        content , hasmac_content_ok = self.décrypt_communication(content,hasmac_content)
 
+        if not hasmac_filename_ok or not hasmac_content_ok:
+            return
         print(f"{self.user_dir} , {filename}")
         file_path = os.path.join(self.user_dir, filename)
         print(f"Saving file '{file_path}'...")
@@ -114,15 +113,16 @@ class ServerManager:
     def list_files_in_folder(self):
         if not self.connected:
             return []
-        print(f"gettin files in {self.user_dir}")
 
         list_files = self.file_manager.list_files_in_folder(self.user_dir)
         encrypted_files =[self.encrypt_communication(file) for file in list_files]
-        return encrypted_files
+        return encrypted_files 
     
-    def get_file_content(self, filename):
+    def get_file_content(self, filename, hasmac_filename):
 
-        filename = self.décrypt_communication(filename)
+        filename , hasmac_ok= self.décrypt_communication(filename,hasmac_filename)
+        if not hasmac_ok:
+            return ""
 
         if not self.connected:
             return ""
@@ -134,14 +134,20 @@ class ServerManager:
 
     
 
-    def create_access(self,loggin, password):
-        print("key derivation with password",password)
+    def create_access(self,loggin, password , hasmac_loggin, hasmac_password):
+        loggin , hasmac_loggin_ok= self.décrypt_communication(loggin,hasmac_loggin)
+        password , hasmac_password_ok= self.décrypt_communication(password,hasmac_password)
+        if not hasmac_loggin_ok or not hasmac_password_ok:
+            return False
+        print ("Création d'un compte pour l'utilisateur : ",loggin , "avec le mot de passe : ",password)
+        print("Dérivation de la clé publique a partir du mot de passe ...")
         public_key = self.encryption_manager.key_derivation(password)
-        print(f"Creating access for user {password} with public key :'{public_key.hex()}'...")
+        print(f"clé publique créé :'{public_key.hex()}'...")
         return self.access_manager.create_access(loggin,public_key)
     # dérivation du mot de passe pour avoir la clé privé  et publique
 
-    def décrypt_communication(self,input):
+     
+    def décrypt_communication(self,input,hasmac):
         # décryptage de la communication envoyé par le client CObra clé de session
 
         print("Déchifrrement de la communication")
@@ -149,7 +155,10 @@ class ServerManager:
         print("input : ",input)
         outpout = self.encryption_manager.decrypt_cobra(input,self.session_key)
         print ("outpout : " , outpout)
-        return outpout
+        print("vérification du hasmhashmacac")
+        hasmac_ok = self.encryption_manager.hmac(input,self.session_key) == hasmac
+        print("hashmac correct : ",hasmac_ok)
+        return outpout , hasmac_ok
     
     
     def encrypt_communication(self,input):
@@ -160,5 +169,6 @@ class ServerManager:
         print("input : ",input)
         outpout = self.encryption_manager.cobra(input,self.session_key)
         print ("outpout : " , outpout)
-        return outpout
-    
+        hasmac = self.encryption_manager.hmac(outpout,self.session_key)
+        print("hasmac : ",hasmac)
+        return outpout, hasmac

@@ -24,7 +24,6 @@ class AccessManager:
         self.create_key(loggin,public_key)
         return True
     def create_key(self, loggin,key):
-        print("creating key")
         if not self.accessAlreadyExists(loggin):
             return False
         self.file_manager.create_key(loggin,key)
